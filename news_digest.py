@@ -1018,7 +1018,7 @@ def main():
                 digest_text = extract_text_from_html(digest_html)
                 top_topics = extract_top_topics(digest_html)
 
-                print("  Generating podcast script via LM Studio...")
+                print("  Generating podcast script via local LLM...")
                 script = generate_podcast_script(digest_text, test_mode)
                 print("  ✓ Script generated")
 

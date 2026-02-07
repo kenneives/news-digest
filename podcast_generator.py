@@ -2,17 +2,16 @@
 Podcast Script Generator
 
 Generates a two-host conversational podcast script from the daily news digest
-using LM Studio's local LLM API (OpenAI-compatible endpoint).
+using a local LLM via OpenAI-compatible endpoint (Ollama or LM Studio).
 
 Hosts:
   - Alex (male): Enthusiastic about tech breakthroughs
   - Sam (female): Analytical, asks good questions
 
 Requirements:
-  - LM Studio running locally with a loaded model (e.g., Llama 3.1 8B Instruct Q4_K_M)
-  - Start the local server in LM Studio's "Local Server" tab
-  - Default endpoint: http://localhost:1234/v1/chat/completions
-  - Test: curl http://localhost:1234/v1/models
+  - Ollama running locally (default: http://localhost:11434)
+  - A model installed (e.g., qwen2.5:14b): ollama pull qwen2.5:14b
+  - Test: curl http://localhost:11434/v1/models
 """
 
 import os
@@ -40,7 +39,7 @@ def extract_text_from_html(html_content: str) -> str:
 
 
 def generate_podcast_script(digest_text: str, test_mode: bool = False) -> str:
-    """Generate a two-host podcast script from digest text via LM Studio.
+    """Generate a two-host podcast script from digest text via local LLM.
 
     Args:
         digest_text: Plain-text version of the daily news digest.
@@ -49,9 +48,9 @@ def generate_podcast_script(digest_text: str, test_mode: bool = False) -> str:
     Returns:
         Formatted script with ``Alex:`` / ``Sam:`` speaker labels.
     """
-    lm_studio_url = os.getenv("LM_STUDIO_URL", "http://localhost:1234")
-    lm_studio_model = os.getenv("LM_STUDIO_MODEL", "")
-    api_url = f"{lm_studio_url}/v1/chat/completions"
+    llm_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
+    llm_model = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:14b")
+    api_url = f"{llm_url}/v1/chat/completions"
 
     # Truncate digest text to fit within context window
     # Rough estimate: 1 token ≈ 4 characters. Reserve ~2000 tokens for system prompt + output.
@@ -104,20 +103,20 @@ Alex: Let's dive right in..."""
         "stream": False,
     }
 
-    # Include model identifier so LM Studio can auto-load it (just-in-time loading)
-    if lm_studio_model:
-        payload["model"] = lm_studio_model
+    # Include model identifier for just-in-time loading
+    if llm_model:
+        payload["model"] = llm_model
 
-    # Retry logic: LM Studio may need time to load the model on first request
+    # Retry logic: Ollama may need time to load the model on first request
     max_retries = 3
     retry_delay = 30  # seconds — model loading can take a while
     for attempt in range(1, max_retries + 1):
-        print(f"  Calling LM Studio at {api_url}... (attempt {attempt}/{max_retries})")
+        print(f"  Calling local LLM at {api_url}... (attempt {attempt}/{max_retries})")
         try:
             response = requests.post(api_url, json=payload, timeout=600)
         except requests.ConnectionError:
             if attempt < max_retries:
-                print(f"  LM Studio not reachable, retrying in {retry_delay}s...")
+                print(f"  Local LLM not reachable, retrying in {retry_delay}s...")
                 time.sleep(retry_delay)
                 continue
             raise
@@ -127,12 +126,12 @@ Alex: Let's dive right in..."""
 
         # 400 typically means model not loaded yet; 503 means server busy loading
         if response.status_code in (400, 503) and attempt < max_retries:
-            print(f"  LM Studio returned {response.status_code} (model may be loading), "
+            print(f"  Local LLM returned {response.status_code} (model may be loading), "
                   f"retrying in {retry_delay}s...")
             time.sleep(retry_delay)
             continue
 
-        print(f"  LM Studio error {response.status_code}: {response.text}")
+        print(f"  Local LLM error {response.status_code}: {response.text}")
         response.raise_for_status()
 
     result = response.json()
