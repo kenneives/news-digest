@@ -115,7 +115,7 @@ INTERESTS = """
    - Popular streaming shows worth watching
    - SKIP: Celebrity gossip, relationship drama, tabloid content
 
-9. **Space Exploration**
+10. **Space Exploration**
    - Major mission updates (NASA, SpaceX, etc.)
    - Scientific discoveries from space missions
 
