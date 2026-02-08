@@ -420,6 +420,7 @@ The 4-6 most significant stories from these priority areas ONLY:
 - AI/ML breakthroughs, tools, and business news
 - Job market signals and opportunities
 - Robotics + AI convergence
+- Social + AI + Web3 convergence (especially intersections of all three)
 - Anthropic news (always include if present)
 
 For each article:
@@ -474,11 +475,19 @@ This helps track potential employers or industry movers.
 
 ---
 
-### 🌍 CLIMATE & WEB3 (If relevant articles exist)
-- Climate tech solutions
-- Marine conservation technology
+### 🌐 SOCIAL & WEB3 (Include if relevant articles exist - HIGH INTEREST)
+- Social platform developments, policy changes, new features
+- Decentralized social platforms (Bluesky, Farcaster, Lens, Frequency)
+- AI + social intersection (AI-powered features, content detection, recommendation systems)
+- Web3 + social intersection (decentralized identity, on-chain social graphs)
 - Web3 regulatory clarity and real use cases
 - NO crypto price speculation
+
+---
+
+### 🌍 CLIMATE TECH (If relevant articles exist)
+- Climate tech solutions
+- Marine conservation technology
 
 ---
 
