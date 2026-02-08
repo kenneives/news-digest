@@ -157,9 +157,13 @@ RSS_FEEDS = {
     "InsideEVs": "https://insideevs.com/rss/news/",
     "The Drive": "https://www.thedrive.com/feed",
 
+    # Social Platforms & Policy
+    "Platformer": "https://www.platformer.news/rss/",
+
     # Web3 & Blockchain (filtered by Claude for non-price content)
     "The Block": "https://www.theblock.co/rss.xml",
     "Decrypt": "https://decrypt.co/feed",
+    "CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
 
     # Health & Longevity
     "STAT News": "https://www.statnews.com/feed/",
@@ -788,7 +792,7 @@ def send_email(html_content: str, podcast_url: str | None = None, top_topics: li
             f'<p><a href="{podcast_url}" style="display: inline-block; padding: 10px 20px; '
             "background: #3182ce; color: #ffffff; border-radius: 6px; text-decoration: none; "
             'font-weight: 600;">Listen Now</a></p>'
-            '<p style="font-size: 13px; color: #718096;">Access via VPN when away from home.</p>'
+            '<p style="font-size: 13px; color: #718096;">Available anywhere — log in with your Audiobookshelf account.</p>'
             + topics_html
             + "</div>"
         )
