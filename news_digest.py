@@ -52,6 +52,16 @@ class Article:
 INTERESTS = """
 ## PRIORITY INTERESTS (Feature prominently in Top Stories)
 
+0. **Project Liberty & Frequency** (ALWAYS include if ANY article matches — from ANY source)
+   - Project Liberty (projectliberty.io) - digital rights, data ownership, human-centric AI
+   - Frequency (frequency.xyz) - layer 1 blockchain for user-controlled data
+   - Kenne is a former employee — ANY news about these is personally important
+   - Token launch / mainnet / going live announcements are CRITICAL — always flag
+   - Include in Top Priority as an ADDITIONAL item (never replace other top items)
+   - SCAN ALL SOURCES: If any article from TechCrunch, The Block, Decrypt, CoinDesk, Hacker News,
+     or any other feed mentions "Project Liberty", "Frequency blockchain", "Frequency.xyz",
+     or "DSNP" (Decentralized Social Networking Protocol), ALWAYS include it
+
 1. **AI/ML & LLMs**
    - New AI tools, frameworks, and developer resources
    - Funding rounds and acquisitions in AI space
@@ -81,7 +91,7 @@ INTERESTS = """
 
 5. **Social Networks & Platforms**
    - Social media platform developments, policy changes, and new features
-   - Decentralized social platforms (Bluesky, Mastodon, Frequency.xyz, Farcaster, Lens)
+   - Decentralized social platforms (Bluesky, Mastodon, Frequency.xyz/Project Liberty, Farcaster, Lens)
    - Creator economy trends and monetization
    - Content moderation, algorithmic transparency, and platform governance
    - **Social + AI intersection**: AI-powered social features, recommendation systems, AI content detection
@@ -159,6 +169,9 @@ RSS_FEEDS = {
 
     # Social Platforms & Policy
     "Platformer": "https://www.platformer.news/rss/",
+
+    # Project Liberty / Frequency (Personal priority - former employer)
+    "Project Liberty": "https://www.projectliberty.io/feed/",
 
     # Web3 & Blockchain (filtered by Claude for non-price content)
     "The Block": "https://www.theblock.co/rss.xml",
@@ -422,6 +435,12 @@ The 4-6 most significant stories from these priority areas ONLY:
 - Robotics + AI convergence
 - Social + AI + Web3 convergence (especially intersections of all three)
 - Anthropic news (always include if present)
+
+**ADDITIONALLY** (do NOT replace any of the above — add as extra items):
+- Project Liberty or Frequency news (Kenne's former employer). Scan ALL articles from
+  EVERY source — if ANY article mentions "Project Liberty", "Frequency blockchain",
+  "Frequency.xyz", or "DSNP", ALWAYS include it as an additional Top Priority item.
+  Token launch / mainnet news is CRITICAL — flag prominently.
 
 For each article:
 - 2-3 sentence summary
