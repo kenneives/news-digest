@@ -1,26 +1,56 @@
 # Daily News Digest
 
-A Python script that fetches news from RSS feeds, uses Claude AI to create a personalized summary, and emails you a daily digest.
+A Python pipeline that fetches news from 30+ RSS feeds, uses Claude AI to create a personalized summary, generates a two-host AI podcast, and delivers everything via email with an optional Audiobookshelf podcast link.
 
 ## Features
 
-- Fetches from 17+ RSS sources across tech, finance, science, and world news
-- Uses Claude AI to summarize and prioritize based on your interests
-- **Duplicate detection**: Tracks sent articles to avoid repeating content day-to-day
-- **Heavy filtering**: Claude selects only the best 15-25 articles from hundreds fetched
-- Sends a clean HTML email digest
-- **Error notifications**: Emails you if the script fails or API credits run out
+- **30+ RSS sources** across tech, AI, robotics, finance, science, health, climate, automotive, and world news
+- **Claude AI summarization** — filters hundreds of articles down to the best 15-25, organized by topic
+- **Two-host AI podcast** — generates a natural conversation between "Alex" and "Sam" from the digest
+- **Multi-voice TTS** — ElevenLabs (premium) with automatic Edge-TTS fallback
+- **Audiobookshelf integration** — auto-uploads podcast episodes for streaming
+- **Duplicate detection** — 7-day article history prevents repeating content
+- **Error notifications** — emails you if the script fails, API credits run out, or no new articles are found
+- **Graceful degradation** — podcast failures don't block email delivery; TTS failures fall back silently
 
 ---
 
-## Setup (macOS/Linux)
+## Architecture
+
+```
+RSS Feeds (30+)
+      │
+      ▼
+ news_digest.py ──── Claude AI ──── HTML Email
+      │
+      ▼
+ podcast_generator.py ──── Local LLM (Ollama)
+      │
+      ▼
+ audio_generator.py ──── ElevenLabs / Edge-TTS
+      │
+      ▼
+ audiobookshelf_client.py ──── Audiobookshelf library scan
+```
+
+| File | Purpose |
+|------|---------|
+| `news_digest.py` | Main entry point — fetches RSS, calls Claude, sends email, orchestrates podcast pipeline |
+| `podcast_generator.py` | Generates a two-host podcast script via local LLM (Ollama/LM Studio) |
+| `audio_generator.py` | Converts script segments to multi-voice MP3 with pydub assembly |
+| `audiobookshelf_client.py` | Triggers Audiobookshelf library scan and provides podcast URL for email |
+
+---
+
+## Quick Start
 
 ### 1. Install dependencies
 
 ```bash
-cd /Users/kenne/ClaudeCode/news-digest
 pip install -r requirements.txt
 ```
+
+**System requirement:** [ffmpeg](https://ffmpeg.org/) must be on your PATH (required for MP3 encoding).
 
 ### 2. Configure environment variables
 
@@ -28,86 +58,113 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` with your credentials:
+Edit `.env` with your credentials. At minimum you need:
 
-- **ANTHROPIC_API_KEY**: Get from https://console.anthropic.com/
-- **GMAIL_ADDRESS**: Your Gmail address
-- **GMAIL_APP_PASSWORD**: Generate at Google Account → Security → 2-Step Verification → App passwords
-- **RECIPIENT_EMAIL**: Where to send the digest
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Get from https://console.anthropic.com/ |
+| `GMAIL_ADDRESS` | Your Gmail address (sender) |
+| `GMAIL_APP_PASSWORD` | 16-char app password (Google Account > Security > 2-Step Verification > App passwords) |
+| `RECIPIENT_EMAIL` | Comma-separated recipient list |
 
-### 3. Test the script
+### 3. Run
 
 ```bash
 python news_digest.py
 ```
 
-### 4. Set up cron job for 8am daily
+This will fetch news, generate the digest email, and (if podcast is configured) generate and upload a podcast episode.
 
-Open your crontab:
+---
+
+## Podcast Setup (Optional)
+
+The podcast pipeline requires a local LLM and a TTS engine. If `AUDIO_OUTPUT_DIR` is not set, the podcast step is skipped entirely.
+
+### Local LLM (Ollama)
+
+Install [Ollama](https://ollama.ai/) and pull a model:
+
+```bash
+ollama pull qwen2.5:14b
+```
+
+### Audiobookshelf (Optional)
+
+Run Audiobookshelf via Docker to host podcast episodes:
+
+```bash
+docker run -d --name audiobookshelf \
+  -p 13378:80 \
+  -v /path/to/audio:/podcasts \
+  -v /path/to/config:/config \
+  -v /path/to/metadata:/metadata \
+  --restart unless-stopped \
+  ghcr.io/advplyr/audiobookshelf
+```
+
+### Podcast environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AUDIO_OUTPUT_DIR` | *(none)* | Directory for generated MP3s — **setting this enables the podcast pipeline** |
+| `LOCAL_LLM_URL` | `http://localhost:11434` | Ollama API endpoint |
+| `LOCAL_LLM_MODEL` | `qwen2.5:14b` | Model for script generation |
+| `AUDIOBOOKSHELF_URL` | `http://localhost:13378` | Audiobookshelf instance |
+| `AUDIOBOOKSHELF_API_KEY` | *(none)* | API token from Audiobookshelf settings |
+| `AUDIOBOOKSHELF_LIBRARY_ID` | *(none)* | Library UUID to scan |
+| `ELEVENLABS_API_KEY` | *(none)* | Premium TTS (falls back to Edge-TTS if unset) |
+| `ELEVENLABS_VOICE_ALEX` | *(auto-rotate)* | Pin a specific ElevenLabs voice for Alex |
+| `ELEVENLABS_VOICE_SAM` | *(auto-rotate)* | Pin a specific ElevenLabs voice for Sam |
+| `ELEVENLABS_MODEL` | `eleven_multilingual_v2` | ElevenLabs model |
+| `INTRO_MUSIC_PATH` | *(none)* | MP3 file for intro music with fade-in |
+| `OUTRO_MUSIC_PATH` | *(none)* | MP3 file for outro music with fade-out |
+| `PODCAST_TEST_MODE` | `false` | Generate a ~2-minute sample instead of full episode |
+
+### Audio details
+
+- Output format: 128kbps CBR mono 44.1kHz MP3
+- Filename pattern: `digest-YYYY-MM-DD.mp3`
+- 300ms silence between speaker changes
+- Daily voice rotation: same date always produces the same voice pairing
+- Old audio files auto-cleaned after 10 days
+
+---
+
+## Scheduling
+
+### macOS/Linux (cron)
+
 ```bash
 crontab -e
 ```
 
-Add this line (runs at 8:00 AM every day):
+Add:
 ```
-0 8 * * * cd /Users/kenne/ClaudeCode/news-digest && /usr/bin/python3 news_digest.py >> /Users/kenne/ClaudeCode/news-digest/digest.log 2>&1
+0 8 * * * cd /path/to/news-digest && /usr/bin/python3 news_digest.py >> digest.log 2>&1
 ```
 
-To verify the cron job was added:
+Verify:
 ```bash
 crontab -l
 ```
 
----
+> **Note:** On macOS, cron may require Full Disk Access in System Preferences > Privacy.
 
-## Setup (Windows)
+### Windows (Task Scheduler)
 
-### 1. Install dependencies
+**Option A: GUI**
 
-Open Command Prompt or PowerShell:
-```cmd
-cd C:\path\to\news-digest
-pip install -r requirements.txt
-```
+1. `Win + R` > `taskschd.msc`
+2. **Create Basic Task** > Name: `Daily News Digest`
+3. Trigger: **Daily** at **8:00 AM**
+4. Action: **Start a program**
+   - Program: `python`
+   - Arguments: `news_digest.py`
+   - Start in: `C:\path\to\news-digest`
+5. In Settings, enable "Run task as soon as possible after a scheduled start is missed"
 
-### 2. Configure environment variables
-
-Copy the example file:
-```cmd
-copy .env.example .env
-```
-
-Edit `.env` in Notepad or your preferred editor with your credentials.
-
-### 3. Test the script
-
-```cmd
-python news_digest.py
-```
-
-### 4. Set up Task Scheduler for 8am daily
-
-**Option A: Using the GUI**
-
-1. Press `Win + R`, type `taskschd.msc`, press Enter
-2. Click **Create Basic Task** in the right panel
-3. Name: `Daily News Digest`, click Next
-4. Trigger: Select **Daily**, click Next
-5. Set start time to **8:00:00 AM**, click Next
-6. Action: Select **Start a program**, click Next
-7. Configure the program:
-   - **Program/script**: `python` (or full path like `C:\Python312\python.exe`)
-   - **Add arguments**: `news_digest.py`
-   - **Start in**: `C:\path\to\news-digest` (your actual folder path)
-8. Check **Open the Properties dialog** and click Finish
-9. In Properties, go to **Settings** tab:
-   - Check "Run task as soon as possible after a scheduled start is missed"
-   - Check "If the task fails, restart every: 1 hour"
-10. Click OK
-
-**Option B: Using PowerShell (one command)**
-
-Run PowerShell as Administrator and execute:
+**Option B: PowerShell**
 
 ```powershell
 $action = New-ScheduledTaskAction -Execute "python" -Argument "news_digest.py" -WorkingDirectory "C:\path\to\news-digest"
@@ -116,20 +173,23 @@ $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 3 -Re
 Register-ScheduledTask -TaskName "DailyNewsDigest" -Action $action -Trigger $trigger -Settings $settings -Description "Fetches news and emails daily digest"
 ```
 
-**To verify the task:**
-```powershell
-Get-ScheduledTask -TaskName "DailyNewsDigest"
-```
+---
 
-**To run it manually for testing:**
-```powershell
-Start-ScheduledTask -TaskName "DailyNewsDigest"
-```
+## RSS Sources
 
-**To remove the task:**
-```powershell
-Unregister-ScheduledTask -TaskName "DailyNewsDigest" -Confirm:$false
-```
+| Category | Sources |
+|----------|---------|
+| **Tech & AI** | Hacker News, TechCrunch, TechCrunch AI, Ars Technica, The Verge, MIT Tech Review, VentureBeat AI, The Information |
+| **Robotics** | IEEE Spectrum Robotics, The Robot Report |
+| **Automotive & EVs** | Electrek, InsideEVs, The Drive |
+| **Social** | Platformer |
+| **Web3** | The Block, Decrypt, CoinDesk |
+| **Health & Longevity** | STAT News, Longevity Technology |
+| **Climate** | Canary Media, CleanTechnica |
+| **Major News** | BBC News, Reuters, NPR |
+| **Finance** | Bloomberg, Financial Times, MarketWatch |
+| **Science & Space** | Science Daily, Phys.org, Nature, NASA, Space.com |
+| **Entertainment** | The Hollywood Reporter |
 
 ---
 
@@ -146,27 +206,25 @@ The script automatically emails you when something goes wrong:
 | **No New Articles Found** | All articles were already sent previously (slow news day or feed issue) |
 | **Unexpected Error** | Something else went wrong (full traceback included) |
 
-All error emails include suggested actions and relevant details to help you fix the issue.
-
 ---
 
 ## Customization
 
 ### Modify your interests
 
-Edit the `INTERESTS` variable in `news_digest.py` to change what topics Claude prioritizes.
+Edit the `INTERESTS` variable in `news_digest.py` to change what topics Claude prioritizes. Interests are organized by priority tier (Priority > High > Moderate) with strict exclusion filters.
 
 ### Add/remove news sources
 
-Edit the `RSS_FEEDS` dictionary in `news_digest.py` to add or remove sources.
+Edit the `RSS_FEEDS` dictionary in `news_digest.py`.
 
-### Change the number of articles
+### Change article limits
 
-Set `MAX_ARTICLES_PER_SOURCE` in `.env` (default: 5)
+Set `MAX_ARTICLES_PER_SOURCE` in `.env` (default: 20).
 
 ### Use a different Claude model
 
-Set `DIGEST_MODEL` in `.env` (default: claude-sonnet-4-20250514)
+Set `DIGEST_MODEL` in `.env` (default: `claude-sonnet-4-20250514`).
 
 ---
 
@@ -180,18 +238,22 @@ Set `DIGEST_MODEL` in `.env` (default: claude-sonnet-4-20250514)
 ### Cron job not running (macOS/Linux)
 - Check the log file: `tail -f digest.log`
 - Ensure Python path is correct: `which python3`
-- macOS may require Full Disk Access for cron in System Preferences → Privacy
+- macOS may require Full Disk Access for cron in System Preferences > Privacy
 
 ### Task Scheduler not running (Windows)
 - Open Task Scheduler and check the task's **History** tab for errors
 - Ensure "Run whether user is logged on or not" is set if needed
 - Verify the Python path: `where python` in Command Prompt
-- Check that the working directory path is correct
 
 ### RSS feed errors
 - Some feeds may be rate-limited or require different parsing
-- Check the console output for specific feed errors
-- Try running manually to see detailed error messages
+- Check console output for specific feed errors
+
+### Podcast not generating
+- Verify Ollama is running: `curl http://localhost:11434/v1/models`
+- Ensure model is installed: `ollama pull qwen2.5:14b`
+- Check that `ffmpeg` is on your PATH: `ffmpeg -version`
+- Verify `AUDIO_OUTPUT_DIR` exists and is writable
 
 ### API credit issues
 - Check your usage at https://console.anthropic.com/
