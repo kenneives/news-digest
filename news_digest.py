@@ -119,21 +119,38 @@ INTERESTS = """
 
 ## MODERATE INTEREST (Include selectively)
 
-9. **Entertainment**
+9. **Finance, Fintech & Crypto Industry**
+   - M&A activity, major funding rounds, IPOs in fintech/crypto
+   - Global macro signals: rate decisions, currency moves, recession indicators
+   - Stock market catalysts: earnings surprises, sector rotations
+   - Crypto industry news: exchange developments, DeFi milestones, institutional adoption
+   - Fintech product launches: neobanks, payment rails, embedded finance
+   - SKIP: Day-trading tips, price predictions, "get rich" schemes
+
+10. **Legal & Regulatory Landscape**
+    - Tech regulation: AI governance, antitrust actions, platform liability
+    - Crypto/fintech regulation: SEC enforcement, stablecoin rules, CBDC developments
+    - Automotive/EV policy: emissions rules, trade tariffs, safety mandates
+    - Robotics & AI labor law: automation impact, liability frameworks
+    - Global regulatory divergence: US vs EU vs Asia approaches
+    - M&A antitrust: major deal approvals/blocks, FTC/DOJ actions
+    - SKIP: Partisan framing, opinion pieces about regulation
+
+11. **Entertainment**
    - Award-winning films and TV (Emmys, Oscars, critical acclaim)
    - Must-watch sci-fi releases
    - Popular streaming shows worth watching
    - SKIP: Celebrity gossip, relationship drama, tabloid content
 
-10. **Space Exploration**
-   - Major mission updates (NASA, SpaceX, etc.)
-   - Scientific discoveries from space missions
+12. **Space Exploration**
+    - Major mission updates (NASA, SpaceX, etc.)
+    - Scientific discoveries from space missions
 
-10. **Biomedical Breakthroughs**
+13. **Biomedical Breakthroughs**
     - FDA approvals for significant treatments
     - Medical research with near-term patient impact
 
-11. **Political & Economic Trends**
+14. **Political & Economic Trends**
     - Factual policy changes affecting tech, business, or science
     - Economic indicators and market trends
     - SKIP: Partisan opinion pieces, political drama
@@ -195,6 +212,17 @@ RSS_FEEDS = {
     "Bloomberg": "https://feeds.bloomberg.com/markets/news.rss",
     "Financial Times": "https://www.ft.com/rss/home",
     "MarketWatch": "https://feeds.marketwatch.com/marketwatch/topstories/",
+
+    # Fintech & Crypto Industry
+    "Finextra": "https://www.finextra.com/rss/headlines.aspx",
+    "CoinTelegraph": "https://cointelegraph.com/rss",
+    "TechCrunch Fintech": "https://techcrunch.com/category/fintech/feed/",
+    "Crunchbase News": "https://news.crunchbase.com/feed/",
+
+    # Legal & Regulatory
+    "Reuters Legal": "https://www.reuters.com/legal/rss",
+    "The Register": "https://www.theregister.com/headlines.atom",
+    "Rest of World": "https://restofworld.org/feed/",
 
     # Science & Space
     "Science Daily": "https://www.sciencedaily.com/rss/all.xml",
@@ -510,6 +538,28 @@ This helps track potential employers or industry movers.
 
 ---
 
+### 📊 FINANCE & FINTECH RADAR (Include if relevant - quick hits format)
+3-5 one-liner quick hits from the global finance, fintech, crypto industry, and stock landscape:
+- Major M&A, funding rounds, IPOs in fintech/crypto
+- Market-moving macro signals (rate decisions, earnings surprises, sector rotations)
+- Crypto industry milestones (exchange news, DeFi, institutional adoption)
+- Fintech product launches and neobank developments
+- Stock market catalysts worth noting
+Format as punchy one-liners with source links. NO price predictions or day-trading tips.
+
+---
+
+### ⚖️ REGULATORY & LEGAL RADAR (Include if relevant - quick hits format)
+2-4 one-liner quick hits on the legal and regulatory landscape across tech sectors:
+- AI governance and regulation (executive orders, EU AI Act, liability frameworks)
+- Crypto/fintech enforcement and rulemaking (SEC, CFTC, stablecoin legislation)
+- Tech antitrust actions and major M&A approvals/blocks
+- Automotive/EV/robotics policy (safety mandates, tariffs, labor impact)
+- Global regulatory divergence (US vs EU vs Asia approaches)
+Format as punchy one-liners with source links. NO partisan framing.
+
+---
+
 ### 📺 WORTH WATCHING (If relevant - entertainment/space/science)
 - Award-winning films/TV
 - Must-see sci-fi
@@ -534,7 +584,7 @@ ALWAYS EXCLUDE:
 QUALITY CONTROL:
 - When multiple sources cover the same story, pick the BEST one
 - Skip sections entirely if fewer than 2 quality articles
-- Total digest: 15-25 articles maximum
+- Total digest: 20-30 articles maximum
 - Prioritize actionable intelligence over general news
 
 ## OUTPUT FORMAT - CRITICAL
