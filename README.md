@@ -1,11 +1,11 @@
 # Daily News Digest
 
-A Python pipeline that fetches news from 30+ RSS feeds, uses Claude AI to create a personalized summary, generates a two-host AI podcast, and delivers everything via email with an optional Audiobookshelf podcast link.
+A Python pipeline that fetches news from 40+ RSS feeds, uses Claude AI to create a personalized summary, generates a two-host AI podcast, and delivers everything via email with an optional Audiobookshelf podcast link.
 
 ## Features
 
-- **30+ RSS sources** across tech, AI, robotics, finance, science, health, climate, automotive, and world news
-- **Claude AI summarization** — filters hundreds of articles down to the best 15-25, organized by topic
+- **40+ RSS sources** across tech, AI, robotics, finance, fintech, crypto, legal/regulatory, science, health, climate, automotive, and world news
+- **Claude AI summarization** — filters hundreds of articles down to the best 20-30, organized by topic
 - **Two-host AI podcast** — generates a natural conversation between "Alex" and "Sam" from the digest
 - **Multi-voice TTS** — ElevenLabs (premium) with automatic Edge-TTS fallback
 - **Audiobookshelf integration** — auto-uploads podcast episodes for streaming
@@ -18,7 +18,7 @@ A Python pipeline that fetches news from 30+ RSS feeds, uses Claude AI to create
 ## Architecture
 
 ```
-RSS Feeds (30+)
+RSS Feeds (40+)
       │
       ▼
  news_digest.py ──── Claude AI ──── HTML Email
@@ -184,6 +184,8 @@ Register-ScheduledTask -TaskName "DailyNewsDigest" -Action $action -Trigger $tri
 | **Automotive & EVs** | Electrek, InsideEVs, The Drive |
 | **Social** | Platformer |
 | **Web3** | The Block, Decrypt, CoinDesk |
+| **Fintech & Crypto Industry** | Finextra, CoinTelegraph, TechCrunch Fintech, Crunchbase News |
+| **Legal & Regulatory** | Reuters Legal, The Register, Rest of World |
 | **Health & Longevity** | STAT News, Longevity Technology |
 | **Climate** | Canary Media, CleanTechnica |
 | **Major News** | BBC News, Reuters, NPR |
