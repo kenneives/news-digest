@@ -12,6 +12,7 @@ import os
 import smtplib
 import ssl
 import sys
+import time
 import traceback
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -623,13 +624,24 @@ HTML RULES:
 - Do NOT wrap in ```html code blocks - return raw HTML only
 """
 
-    message = client.messages.create(
-        model=model,
-        max_tokens=4096,
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            message = client.messages.create(
+                model=model,
+                max_tokens=4096,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            break
+        except (anthropic.APIStatusError,) as e:
+            if e.status_code in (429, 529) and attempt < max_retries - 1:
+                wait = 2 ** attempt * 5  # 5s, 10s, 20s, 40s
+                print(f"Claude API returned {e.status_code}, retrying in {wait}s (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(wait)
+            else:
+                raise
 
     html_content = message.content[0].text
 
