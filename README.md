@@ -142,6 +142,29 @@ crontab -e
 Add:
 ```
 0 8 * * * cd /path/to/news-digest && /usr/bin/python3 news_digest.py >> digest.log 2>&1
+
+Optional log rotation (Linux/macOS):
+
+1. Create `news-digest-logrotate.conf`:
+
+```conf
+/path/to/news-digest/digest.log {
+  daily
+  rotate 30
+  compress
+  missingok
+  notifempty
+  copytruncate
+}
+```
+
+2. Run it daily:
+
+```bash
+0 7 * * * /usr/sbin/logrotate /path/to/news-digest/news-digest-logrotate.conf
+```
+
+The script also deletes rotated `digest.log.*` files older than `LOG_RETENTION_DAYS` (default 30).
 ```
 
 Verify:

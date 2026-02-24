@@ -9,6 +9,7 @@ and sends a personalized email digest.
 import hashlib
 import json
 import os
+import random
 import smtplib
 import ssl
 import sys
@@ -35,6 +36,8 @@ load_dotenv()
 
 # History file to track sent articles (prevents duplicates)
 HISTORY_FILE = Path(__file__).parent / "digest_history.json"
+MODEL_CACHE_FILE = Path(__file__).parent / "model_cache.json"
+DEFAULT_LOG_FILE = Path(__file__).parent / "digest.log"
 
 # =============================================================================
 # Configuration
@@ -412,11 +415,141 @@ def fetch_all_news() -> list[Article]:
 # Claude Summarization
 # =============================================================================
 
+def cleanup_old_logs(retention_days: int) -> None:
+    """Delete rotated log files older than retention_days."""
+    if retention_days <= 0:
+        return
+
+    log_file = Path(os.getenv("LOG_FILE", str(DEFAULT_LOG_FILE)))
+    if not log_file.parent.exists():
+        return
+
+    cutoff = datetime.now() - timedelta(days=retention_days)
+    base_name = log_file.name
+
+    for path in log_file.parent.iterdir():
+        if not path.is_file():
+            continue
+        if path.name == base_name:
+            # Never delete the active log file.
+            continue
+        if not path.name.startswith(base_name + "."):
+            continue
+        try:
+            mtime = datetime.fromtimestamp(path.stat().st_mtime)
+        except OSError:
+            continue
+        if mtime < cutoff:
+            try:
+                path.unlink()
+            except OSError:
+                pass
+
+
+def _parse_datetime(value: str) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _select_latest_model(models: list, family: str) -> Optional[str]:
+    family_lower = family.lower()
+    candidates = []
+    for model in models:
+        model_id = getattr(model, "id", None) or model.get("id") if isinstance(model, dict) else None
+        if not model_id:
+            continue
+        if family_lower not in model_id.lower():
+            continue
+        created_at = getattr(model, "created_at", None) or model.get("created_at") if isinstance(model, dict) else None
+        created_dt = _parse_datetime(created_at) if isinstance(created_at, str) else None
+        candidates.append((created_dt, model_id))
+
+    if not candidates:
+        return None
+
+    # Prefer newest created_at, fall back to lexical ID ordering.
+    candidates.sort(key=lambda item: (item[0] is None, item[0], item[1]))
+    return candidates[-1][1]
+
+
+def resolve_model_order(client: anthropic.Anthropic) -> list[str]:
+    """Resolve the model fallback order (sonnet -> opus -> haiku)."""
+
+    use_latest = os.getenv("USE_LATEST_MODELS", "false").lower() == "true"
+    refresh_days = int(os.getenv("MODEL_REFRESH_DAYS", "7"))
+    default_models = {
+        "sonnet": "claude-sonnet-4-5",
+        "opus": "claude-opus-4-6",
+        "haiku": "claude-haiku-4-5",
+    }
+
+    cache = {}
+    if MODEL_CACHE_FILE.exists():
+        try:
+            cache = json.loads(MODEL_CACHE_FILE.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            cache = {}
+
+    cached_models = cache.get("models", {}) if isinstance(cache, dict) else {}
+    last_checked = _parse_datetime(cache.get("last_checked", "")) if isinstance(cache, dict) else None
+
+    models_to_use = default_models.copy()
+
+    if use_latest:
+        cache_fresh = last_checked and (datetime.utcnow() - last_checked) <= timedelta(days=refresh_days)
+        if cache_fresh and cached_models:
+            models_to_use.update({k: v for k, v in cached_models.items() if v})
+        else:
+            try:
+                response = client.models.list()
+                model_list = getattr(response, "data", response)
+                resolved = {
+                    "sonnet": _select_latest_model(model_list, "sonnet"),
+                    "opus": _select_latest_model(model_list, "opus"),
+                    "haiku": _select_latest_model(model_list, "haiku"),
+                }
+                for key, value in resolved.items():
+                    if value:
+                        models_to_use[key] = value
+
+                MODEL_CACHE_FILE.write_text(
+                    json.dumps(
+                        {"last_checked": datetime.utcnow().isoformat(), "models": models_to_use},
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
+            except Exception as e:
+                print(f"⚠️ Failed to refresh Claude model list, using cached/default models: {e}")
+                if cached_models:
+                    models_to_use.update({k: v for k, v in cached_models.items() if v})
+
+    # Allow a manual override for the primary model, but keep fallbacks.
+    primary_override = os.getenv("DIGEST_MODEL", "").strip()
+    order = [models_to_use["sonnet"], models_to_use["opus"], models_to_use["haiku"]]
+    if primary_override:
+        order = [primary_override] + [m for m in order if m != primary_override]
+
+    # De-duplicate while preserving order.
+    deduped = []
+    for model_id in order:
+        if model_id and model_id not in deduped:
+            deduped.append(model_id)
+
+    return deduped
+
+
 def summarize_with_claude(articles: list[Article]) -> str:
     """Use Claude to create a personalized digest summary."""
 
     client = anthropic.Anthropic()
-    model = os.getenv('DIGEST_MODEL', 'claude-sonnet-4-20250514')
+    model_order = resolve_model_order(client)
+    if model_order:
+        print(f"Claude model order: {', '.join(model_order)}")
 
     # Format articles for Claude
     articles_text = ""
@@ -624,24 +757,50 @@ HTML RULES:
 - Do NOT wrap in ```html code blocks - return raw HTML only
 """
 
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            message = client.messages.create(
-                model=model,
-                max_tokens=4096,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
-            )
+    max_retries = 3
+    base_wait = 3
+    max_wait = 20
+    last_error = None
+
+    for model in model_order:
+        for attempt in range(max_retries):
+            try:
+                message = client.messages.create(
+                    model=model,
+                    max_tokens=4096,
+                    messages=[
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                last_error = None
+                print(f"✓ Claude response generated with model: {model}")
+                break
+            except (anthropic.APIStatusError,) as e:
+                if e.status_code in (429, 529):
+                    last_error = e
+                    if attempt < max_retries - 1:
+                        wait = min(max_wait, base_wait * (2 ** attempt))
+                        jitter = random.uniform(0.7, 1.3)
+                        wait *= jitter
+                        print(
+                            f"Claude API returned {e.status_code} for {model}, "
+                            f"retrying in {wait:.1f}s (attempt {attempt + 1}/{max_retries})..."
+                        )
+                        time.sleep(wait)
+                    else:
+                        print(
+                            f"Claude API returned {e.status_code} for {model} after {max_retries} attempts, "
+                            "trying next fallback model..."
+                        )
+                        break
+                else:
+                    raise
+
+        if last_error is None:
             break
-        except (anthropic.APIStatusError,) as e:
-            if e.status_code in (429, 529) and attempt < max_retries - 1:
-                wait = 2 ** attempt * 5  # 5s, 10s, 20s, 40s
-                print(f"Claude API returned {e.status_code}, retrying in {wait}s (attempt {attempt + 1}/{max_retries})...")
-                time.sleep(wait)
-            else:
-                raise
+
+    if last_error is not None:
+        raise last_error
 
     html_content = message.content[0].text
 
@@ -1026,6 +1185,8 @@ def main():
     print(f"{'='*60}\n")
 
     try:
+        cleanup_old_logs(int(os.getenv("LOG_RETENTION_DAYS", "30")))
+
         # Load history for duplicate detection
         print("📂 Loading article history...")
         history = load_history()
@@ -1090,11 +1251,24 @@ def main():
             print(f"API error: {e}")
             sys.exit(1)
         except anthropic.APIError as e:
-            send_error_email(
-                "Claude API Error",
-                f"An error occurred while calling the Claude API: {e}",
-                traceback.format_exc()
-            )
+            error_message = str(e)
+            error_type = "Claude API Error"
+            if isinstance(e, anthropic.APIStatusError) and e.status_code in (429, 529):
+                if e.status_code == 529 or "overloaded" in error_message.lower():
+                    error_type = "Claude API Overloaded"
+                    error_message = (
+                        "Claude is overloaded (HTTP 529). The provider could not handle the request "
+                        "after retries and fallbacks."
+                    )
+                else:
+                    error_type = "Claude API Rate Limited"
+                    error_message = (
+                        "Claude returned HTTP 429 (rate limited). The provider could not handle the request "
+                        "after retries and fallbacks."
+                    )
+
+            send_error_email(error_type, f"An error occurred while calling the Claude API: {error_message}",
+                            traceback.format_exc())
             print(f"API error: {e}")
             sys.exit(1)
 
