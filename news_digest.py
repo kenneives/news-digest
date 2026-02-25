@@ -681,12 +681,13 @@ This helps track potential employers or industry movers.
 ---
 
 ### 📊 FINANCE & FINTECH RADAR (Include if relevant - quick hits format)
-3-5 one-liner quick hits from the global finance, fintech, crypto industry, and stock landscape:
+3-6 one-liner quick hits from the global finance, fintech, crypto industry, and stock landscape:
 - Major M&A, funding rounds, IPOs in fintech/crypto
 - Market-moving macro signals (rate decisions, earnings surprises, sector rotations)
 - Crypto industry milestones (exchange news, DeFi, institutional adoption)
 - Fintech product launches and neobank developments
 - Stock market catalysts worth noting
+- World economics: trade policy shifts, GDP/inflation signals, central bank moves, emerging market developments
 Format as punchy one-liners with source links. NO price predictions or day-trading tips.
 
 ---
