@@ -56,15 +56,18 @@ class Article:
 INTERESTS = """
 ## PRIORITY INTERESTS (Feature prominently in Top Stories)
 
-0. **Project Liberty & Frequency** (ALWAYS include if ANY article matches — from ANY source)
+0. **Project Liberty, Frequency, Tala, Luma AI & Angler AI** (ALWAYS include if ANY article matches — from ANY source)
    - Project Liberty (projectliberty.io) - digital rights, data ownership, human-centric AI
    - Frequency (frequency.xyz) - layer 1 blockchain for user-controlled data
-   - Kenne is a former employee — ANY news about these is personally important
-   - Token launch / mainnet / going live announcements are CRITICAL — always flag
-   - Include in Top Priority as an ADDITIONAL item (never replace other top items)
-   - SCAN ALL SOURCES: If any article from TechCrunch, The Block, Decrypt, CoinDesk, Hacker News,
-     or any other feed mentions "Project Liberty", "Frequency blockchain", "Frequency.xyz",
-     or "DSNP" (Decentralized Social Networking Protocol), ALWAYS include it
+   - Tala (tala.co) - fintech, AI-powered credit, financial inclusion in emerging markets
+   - Luma AI (lumalabs.ai) - AI video generation, Dream Machine, 3D/visual AI
+   - Angler AI (getangler.ai) - predictive AI for growth marketing, audience targeting
+   - Kenne has personal ties to ALL of these — ANY news is personally important
+   - Funding rounds, product launches, partnerships, and key announcements are CRITICAL
+   - Include in Top Priority as ADDITIONAL items (never replace other top items)
+   - SCAN ALL SOURCES: If any article mentions "Project Liberty", "Frequency blockchain",
+     "DSNP", "Tala" (fintech), "Luma AI", "Luma Labs", "Dream Machine", "Angler AI",
+     or "getangler", ALWAYS include it
 
 1. **AI/ML & LLMs**
    - New AI tools, frameworks, and developer resources
@@ -191,8 +194,9 @@ RSS_FEEDS = {
     # Social Platforms & Policy
     "Platformer": "https://www.platformer.news/rss/",
 
-    # Project Liberty / Frequency (Personal priority - former employer)
+    # Personal priority companies (invested in / working at)
     "Project Liberty": "https://www.projectliberty.io/feed/",
+    "Tala": "https://tala.co/feed/",
 
     # Web3 & Blockchain (filtered by Claude for non-price content)
     "The Block": "https://www.theblock.co/rss.xml",
@@ -603,6 +607,10 @@ The 4-6 most significant stories from these priority areas ONLY:
   EVERY source — if ANY article mentions "Project Liberty", "Frequency blockchain",
   "Frequency.xyz", or "DSNP", ALWAYS include it as an additional Top Priority item.
   Token launch / mainnet news is CRITICAL — flag prominently.
+- Tala, Luma AI, or Angler AI news (Kenne's personal interest companies). Scan ALL articles
+  from EVERY source — if ANY article mentions "Tala" (fintech/credit), "Luma AI", "Luma Labs",
+  "Dream Machine", "Angler AI", or "getangler", ALWAYS include as additional Top Priority items.
+  Funding rounds, product launches, and partnerships are CRITICAL — flag prominently.
 
 For each article:
 - 2-3 sentence summary
