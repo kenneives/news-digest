@@ -215,6 +215,17 @@ RSS_FEEDS = {
     "BBC News": "https://feeds.bbci.co.uk/news/rss.xml",
     "Reuters": "https://www.reutersagency.com/feed/",
     "NPR News": "https://feeds.npr.org/1001/rss.xml",
+    "AP News": "https://rsshub.app/apnews/topics/apf-topnews",
+    "Al Jazeera": "https://www.aljazeera.com/xml/rss/all.xml",
+
+    # US News
+    "Politico": "https://www.politico.com/rss/politicopicks.xml",
+    "The Hill": "https://thehill.com/feed/",
+    "USA Today": "https://www.usatoday.com/news/nation/",
+
+    # Los Angeles Local
+    "LA Times": "https://www.latimes.com/local/rss2.0.xml",
+    "LAist": "https://laist.com/rss/index.xml",
 
     # Finance & Business
     "Bloomberg": "https://feeds.bloomberg.com/markets/news.rss",
@@ -700,6 +711,39 @@ Format as punchy one-liners with source links. NO price predictions or day-tradi
 - Automotive/EV/robotics policy (safety mandates, tariffs, labor impact)
 - Global regulatory divergence (US vs EU vs Asia approaches)
 Format as punchy one-liners with source links. NO partisan framing.
+
+---
+
+### 🌏 GLOBAL NEWS QUICK HITS (Include if relevant - quick hits format)
+3-5 one-liner quick hits on major international developments:
+- Geopolitical shifts, conflicts, diplomatic milestones
+- International economic developments (trade deals, sanctions, emerging market moves)
+- Global health, humanitarian, or environmental events
+- Major elections, regime changes, or protests worldwide
+Focus on events with broad significance. NO partisan framing. NO US-domestic stories (those go in USA News).
+Format as punchy one-liners with source links.
+
+---
+
+### 🇺🇸 USA NEWS QUICK HITS (Include if relevant - quick hits format)
+3-5 one-liner quick hits on significant US national developments:
+- Federal policy, executive actions, congressional legislation
+- Supreme Court decisions and major legal rulings
+- National economic signals (jobs reports, infrastructure, housing)
+- Major domestic events with national impact
+Focus on substantive developments, not political horse-race coverage. NO partisan framing or opinion.
+Format as punchy one-liners with source links.
+
+---
+
+### 📍 LOS ANGELES LOCAL (Include if relevant - quick hits format)
+2-4 one-liner quick hits on LA-area news:
+- City/county policy, infrastructure, transit, housing developments
+- Local tech and startup ecosystem news
+- Cultural events, openings, or closures of note
+- Weather, safety, or environmental events affecting LA
+Focus on news that matters to someone living and working in LA. NO celebrity gossip.
+Format as punchy one-liners with source links.
 
 ---
 

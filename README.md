@@ -1,10 +1,10 @@
 # Daily News Digest
 
-A Python pipeline that fetches news from 40+ RSS feeds, uses Claude AI to create a personalized summary, generates a two-host AI podcast, and delivers everything via email with an optional Audiobookshelf podcast link.
+A Python pipeline that fetches news from 50+ RSS feeds, uses Claude AI to create a personalized summary, generates a two-host AI podcast, and delivers everything via email with an optional Audiobookshelf podcast link.
 
 ## Features
 
-- **40+ RSS sources** across tech, AI, robotics, finance, fintech, crypto, legal/regulatory, science, health, climate, automotive, and world news
+- **50+ RSS sources** across tech, AI, robotics, finance, fintech, crypto, legal/regulatory, science, health, climate, automotive, global news, US news, LA local, and more
 - **Claude AI summarization** — filters hundreds of articles down to the best 20-30, organized by topic
 - **Two-host AI podcast** — generates a natural conversation between "Alex" and "Sam" from the digest
 - **Multi-voice TTS** — ElevenLabs (premium) with automatic Edge-TTS fallback
@@ -18,7 +18,7 @@ A Python pipeline that fetches news from 40+ RSS feeds, uses Claude AI to create
 ## Architecture
 
 ```
-RSS Feeds (40+)
+RSS Feeds (50+)
       │
       ▼
  news_digest.py ──── Claude AI ──── HTML Email
@@ -211,7 +211,9 @@ Register-ScheduledTask -TaskName "DailyNewsDigest" -Action $action -Trigger $tri
 | **Legal & Regulatory** | Reuters Legal, The Register, Rest of World |
 | **Health & Longevity** | STAT News, Longevity Technology |
 | **Climate** | Canary Media, CleanTechnica |
-| **Major News** | BBC News, Reuters, NPR |
+| **Major News** | BBC News, Reuters, NPR, AP News, Al Jazeera |
+| **US News** | Politico, The Hill, USA Today |
+| **Los Angeles Local** | LA Times, LAist |
 | **Finance** | Bloomberg, Financial Times, MarketWatch |
 | **Science & Space** | Science Daily, Phys.org, Nature, NASA, Space.com |
 | **Entertainment** | The Hollywood Reporter |
