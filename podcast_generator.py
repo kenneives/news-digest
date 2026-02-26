@@ -244,8 +244,16 @@ def _select_best_model(llm_url: str, configured_model: str) -> str:
         candidates.append((name, rounded, _model_version(name)))
 
     if candidates:
-        # Sort: highest version first, then by size preference order
-        size_rank = {s: i for i, s in enumerate(PREFERRED_SIZES_B)}
+        # Sort: highest version first, then by size preference order.
+        # Reorder size preferences so the configured model's bucket comes first,
+        # preventing daily size-change notifications when both sizes are available.
+        configured_size_b = _parse_size_b(configured_model)
+        if configured_size_b is not None:
+            configured_bucket = min(PREFERRED_SIZES_B, key=lambda s: abs(s - configured_size_b))
+            preferred = [configured_bucket] + [s for s in PREFERRED_SIZES_B if s != configured_bucket]
+        else:
+            preferred = PREFERRED_SIZES_B
+        size_rank = {s: i for i, s in enumerate(preferred)}
         candidates.sort(key=lambda c: (c[2], -size_rank.get(c[1], 99)), reverse=True)
         best_name, best_size, best_ver = candidates[0]
         if best_name != configured_model:
