@@ -10,7 +10,7 @@ Hosts:
 
 Requirements:
   - Ollama running locally (default: http://localhost:11434)
-  - A model installed (e.g., qwen2.5:14b): ollama pull qwen2.5:14b
+  - A model installed (e.g., qwen2.5:8b): ollama pull qwen2.5:8b
   - Test: curl http://localhost:11434/v1/models
 """
 
@@ -47,8 +47,12 @@ def extract_text_from_html(html_content: str) -> str:
 
 
 # Acceptable parameter sizes for podcast script generation (in billions).
-# Ordered by preference: 14b is the sweet spot, 30b if available, 8b as minimum.
-PREFERRED_SIZES_B = [14, 30, 8]
+# Ordered by preference: 8b for speed, 14b for quality, 30b if available.
+PREFERRED_SIZES_B = [8, 14, 30]
+
+# Per-bucket read timeout (seconds) for the LLM request.
+# Larger models need more time to generate a full podcast script.
+MODEL_TIMEOUT_S = {8: 300, 14: 600, 30: 900}
 
 # Size strings Ollama uses in model names and parameter_size fields
 _SIZE_PATTERN = re.compile(r"(\d+(?:\.\d+)?)[bB]")
@@ -194,7 +198,7 @@ def _pull_model(llm_url: str, model_name: str) -> None:
         ) from exc
 
 
-def _select_best_model(llm_url: str, configured_model: str) -> str:
+def _select_best_model(llm_url: str, configured_model: str) -> tuple[str, int]:
     """Pick the best available model from the same family in the 8b-30b range.
 
     Logic:
@@ -202,16 +206,19 @@ def _select_best_model(llm_url: str, configured_model: str) -> str:
       2. Filter to the same family as the configured model (e.g. 'qwen').
       3. Keep only models whose parameter size rounds to 8b, 14b, or 30b.
       4. Among matches, prefer: highest version first, then size by preference order.
-      5. If no suitable model is found locally, pull the configured 14b default.
+      5. If no suitable model is found locally, pull the configured default.
 
     Returns:
-        The model name to use for generation.
+        Tuple of (model_name, size_bucket_b) for generation and timeout lookup.
     """
+    configured_size = _parse_size_b(configured_model) or 8
+    configured_bucket = min(PREFERRED_SIZES_B, key=lambda s: abs(s - configured_size))
+
     models = _list_ollama_models(llm_url)
     if models is None:
         # Ollama not reachable — fall back to configured model and let retry loop handle it
         logger.warning("Cannot discover models — falling back to configured: %s", configured_model)
-        return configured_model
+        return configured_model, configured_bucket
 
     target_family = _model_family(configured_model)
     all_names = [m["name"] for m in models]
@@ -247,12 +254,7 @@ def _select_best_model(llm_url: str, configured_model: str) -> str:
         # Sort: highest version first, then by size preference order.
         # Reorder size preferences so the configured model's bucket comes first,
         # preventing daily size-change notifications when both sizes are available.
-        configured_size_b = _parse_size_b(configured_model)
-        if configured_size_b is not None:
-            configured_bucket = min(PREFERRED_SIZES_B, key=lambda s: abs(s - configured_size_b))
-            preferred = [configured_bucket] + [s for s in PREFERRED_SIZES_B if s != configured_bucket]
-        else:
-            preferred = PREFERRED_SIZES_B
+        preferred = [configured_bucket] + [s for s in PREFERRED_SIZES_B if s != configured_bucket]
         size_rank = {s: i for i, s in enumerate(preferred)}
         candidates.sort(key=lambda c: (c[2], -size_rank.get(c[1], 99)), reverse=True)
         best_name, best_size, best_ver = candidates[0]
@@ -263,19 +265,16 @@ def _select_best_model(llm_url: str, configured_model: str) -> str:
             )
             print(f"  Auto-selected model: {best_name} (latest available in {target_family} family)")
 
-            # Notify if the size bucket changed (e.g. 14b -> 30b or 14b -> 8b)
-            configured_size = _parse_size_b(configured_model)
-            if configured_size is not None:
-                configured_bucket = min(PREFERRED_SIZES_B, key=lambda s: abs(s - configured_size))
-                if best_size != configured_bucket:
-                    _notify_model_size_change(
-                        best_name, best_size, configured_model, configured_bucket,
-                    )
+            # Notify if the size bucket changed (e.g. 14b -> 8b or 8b -> 14b)
+            if best_size != configured_bucket:
+                _notify_model_size_change(
+                    best_name, best_size, configured_model, configured_bucket,
+                )
         else:
             logger.info("Configured model '%s' is the best available", configured_model)
-        return best_name
+        return best_name, best_size
 
-    # No suitable model in the family — pull the configured 14b default
+    # No suitable model in the family — pull the configured default
     logger.warning(
         "No %s model in 8b/14b/30b range found locally (available: %s). "
         "Pulling configured default '%s'...",
@@ -284,7 +283,7 @@ def _select_best_model(llm_url: str, configured_model: str) -> str:
         configured_model,
     )
     _pull_model(llm_url, configured_model)
-    return configured_model
+    return configured_model, configured_bucket
 
 
 def generate_podcast_script(digest_text: str, test_mode: bool = False) -> str:
@@ -298,11 +297,12 @@ def generate_podcast_script(digest_text: str, test_mode: bool = False) -> str:
         Formatted script with ``Alex:`` / ``Sam:`` speaker labels.
     """
     llm_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
-    configured_model = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:14b")
+    configured_model = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:8b")
     api_url = f"{llm_url}/v1/chat/completions"
 
     # Discover the best available model in the same family (8b/14b/30b range)
-    llm_model = _select_best_model(llm_url, configured_model)
+    llm_model, model_size_b = _select_best_model(llm_url, configured_model)
+    request_timeout = MODEL_TIMEOUT_S.get(model_size_b, 600)
 
     # Truncate digest text to fit within context window
     # Rough estimate: 1 token ≈ 4 characters. Reserve ~2000 tokens for system prompt + output.
@@ -368,7 +368,7 @@ Alex: Let's dive right in..."""
         retry_delay = base_delay * (2 ** (attempt - 1))  # exponential backoff
         print(f"  Calling local LLM at {api_url}... (attempt {attempt}/{max_retries})")
         try:
-            response = requests.post(api_url, json=payload, timeout=600)
+            response = requests.post(api_url, json=payload, timeout=request_timeout)
         except requests.ConnectionError:
             if attempt < max_retries:
                 print(f"  Local LLM not reachable, retrying in {retry_delay}s...")
@@ -386,7 +386,8 @@ Alex: Let's dive right in..."""
             # If model went missing (another process removed it), re-discover
             if response.status_code in (404, 400) and "not found" in response.text.lower():
                 print(f"  Model '{llm_model}' appears to have been removed — re-discovering...")
-                llm_model = _select_best_model(llm_url, configured_model)
+                llm_model, model_size_b = _select_best_model(llm_url, configured_model)
+                request_timeout = MODEL_TIMEOUT_S.get(model_size_b, 600)
                 payload["model"] = llm_model
             time.sleep(retry_delay)
             continue
