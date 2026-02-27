@@ -10,7 +10,7 @@ Hosts:
 
 Requirements:
   - Ollama running locally (default: http://localhost:11434)
-  - A model installed (e.g., qwen2.5:8b): ollama pull qwen2.5:8b
+  - A model installed (e.g., qwen2.5:14b): ollama pull qwen2.5:14b
   - Test: curl http://localhost:11434/v1/models
 """
 
@@ -47,8 +47,8 @@ def extract_text_from_html(html_content: str) -> str:
 
 
 # Acceptable parameter sizes for podcast script generation (in billions).
-# Ordered by preference: 8b for speed, 14b for quality, 30b if available.
-PREFERRED_SIZES_B = [8, 14, 30]
+# Ordered by preference: 14b is the sweet spot, then 8b for speed, 30b if available.
+PREFERRED_SIZES_B = [14, 8, 30]
 
 # Per-bucket read timeout (seconds) for the LLM request.
 # Larger models need more time to generate a full podcast script.
@@ -297,7 +297,7 @@ def generate_podcast_script(digest_text: str, test_mode: bool = False) -> str:
         Formatted script with ``Alex:`` / ``Sam:`` speaker labels.
     """
     llm_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
-    configured_model = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:8b")
+    configured_model = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:14b")
     api_url = f"{llm_url}/v1/chat/completions"
 
     # Discover the best available model in the same family (8b/14b/30b range)
