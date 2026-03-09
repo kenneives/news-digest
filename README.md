@@ -109,7 +109,7 @@ docker run -d --name audiobookshelf \
 |----------|---------|-------------|
 | `AUDIO_OUTPUT_DIR` | *(none)* | Directory for generated MP3s — **setting this enables the podcast pipeline** |
 | `LOCAL_LLM_URL` | `http://localhost:11434` | Ollama API endpoint |
-| `LOCAL_LLM_MODEL` | `qwen2.5:14b` | Model for script generation |
+| `LOCAL_LLM_MODEL` | `qwen3.5:9b` | Model for script generation |
 | `AUDIOBOOKSHELF_URL` | `http://localhost:13378` | Audiobookshelf instance |
 | `AUDIOBOOKSHELF_API_KEY` | *(none)* | API token from Audiobookshelf settings |
 | `AUDIOBOOKSHELF_LIBRARY_ID` | *(none)* | Library UUID to scan |
