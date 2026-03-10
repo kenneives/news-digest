@@ -51,7 +51,17 @@ _SIZE_PATTERN = re.compile(r"(\d+(?:\.\d+)?)[bB]")
 
 
 def _parse_size_b(text: str) -> float | None:
-    """Extract parameter size in billions from a string like '14b' or '14.8B'."""
+    """Extract parameter size in billions from a string like '14b' or '14.8B'.
+
+    For Ollama model names like 'qwen3.5:9b', parse from the tag portion
+    (after ':') first so the family version number isn't mistaken for size.
+    """
+    # If the name contains a colon tag, parse the tag portion first
+    if ":" in text:
+        tag = text.split(":", 1)[1]
+        m = _SIZE_PATTERN.search(tag)
+        if m:
+            return float(m.group(1))
     m = _SIZE_PATTERN.search(text)
     return float(m.group(1)) if m else None
 
@@ -161,7 +171,9 @@ Alex: Let's dive right in..."""
 
     user_prompt = f"""Here is today's news digest. Write the podcast script based on this content:
 
-{digest_text}"""
+{digest_text}
+
+/no_think"""
 
     payload = {
         "messages": [
@@ -213,6 +225,9 @@ Alex: Let's dive right in..."""
 
     result = response.json()
     script = result["choices"][0]["message"]["content"].strip()
+
+    # Strip <think> blocks that reasoning models (e.g. Qwen3.5) may emit
+    script = re.sub(r"<think>.*?</think>\s*", "", script, flags=re.DOTALL)
 
     return script
 
