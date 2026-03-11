@@ -16,7 +16,7 @@ import sys
 import time
 import traceback
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -515,7 +515,7 @@ def resolve_model_order(client: anthropic.Anthropic) -> list[str]:
     models_to_use = default_models.copy()
 
     if use_latest:
-        cache_fresh = last_checked and (datetime.utcnow() - last_checked) <= timedelta(days=refresh_days)
+        cache_fresh = last_checked and (datetime.now(timezone.utc) - last_checked) <= timedelta(days=refresh_days)
         if cache_fresh and cached_models:
             models_to_use.update({k: v for k, v in cached_models.items() if v})
         else:
@@ -533,7 +533,7 @@ def resolve_model_order(client: anthropic.Anthropic) -> list[str]:
 
                 MODEL_CACHE_FILE.write_text(
                     json.dumps(
-                        {"last_checked": datetime.utcnow().isoformat(), "models": models_to_use},
+                        {"last_checked": datetime.now(timezone.utc).isoformat(), "models": models_to_use},
                         indent=2,
                     ),
                     encoding="utf-8",
