@@ -126,7 +126,7 @@ def generate_podcast_script(digest_text: str, test_mode: bool = False) -> str:
     """
     llm_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
     llm_model = os.getenv("LOCAL_LLM_MODEL", "qwen3.5:9b")
-    api_url = f"{llm_url}/v1/chat/completions"
+    api_url = f"{llm_url}/api/chat"
 
     # Ensure the configured model is available (auto-pull if missing)
     _ensure_model_available(llm_url, llm_model)
@@ -175,19 +175,22 @@ Alex: Let's dive right in..."""
 
 /no_think"""
 
-    payload = {
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "temperature": 0.8,
-        "max_tokens": 4096 if not test_mode else 1024,
-        "stream": False,
-    }
+    # Embed system prompt in user message for better compatibility (some models ignore system role)
+    combined_prompt = f"{system_prompt}\n\n---\n\n{user_prompt}"
 
-    # Include model identifier for just-in-time loading
-    if llm_model:
-        payload["model"] = llm_model
+    payload = {
+        "model": llm_model,
+        "messages": [
+            {"role": "user", "content": combined_prompt},
+        ],
+        "stream": False,
+        "keep_alive": "5m",
+        "options": {
+            "num_predict": 4096 if not test_mode else 1024,
+            "num_ctx": 8192,
+            "temperature": 0.8,
+        },
+    }
 
     # Retry logic: Ollama may need time to load the model on first request,
     # or another process (e.g. trading bot) may be swapping models.
@@ -230,7 +233,7 @@ Alex: Let's dive right in..."""
         response.raise_for_status()
 
     result = response.json()
-    script = result["choices"][0]["message"]["content"].strip()
+    script = result["message"]["content"].strip()
 
     # Strip <think> blocks that reasoning models (e.g. Qwen3.5) may emit
     script = re.sub(r"<think>.*?</think>\s*", "", script, flags=re.DOTALL)
