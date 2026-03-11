@@ -44,7 +44,7 @@ def extract_text_from_html(html_content: str) -> str:
 # Per-size read timeout (seconds) for the LLM request.
 # Larger models need more time to generate a full podcast script.
 # Maps size bucket (in billions) to timeout seconds.
-MODEL_TIMEOUT_S = {8: 300, 14: 600, 30: 900}
+MODEL_TIMEOUT_S = {8: 600, 14: 900, 30: 1200}
 
 # Size strings Ollama uses in model names and parameter_size fields
 _SIZE_PATTERN = re.compile(r"(\d+(?:\.\d+)?)[bB]")
@@ -202,6 +202,12 @@ Alex: Let's dive right in..."""
         except requests.ConnectionError:
             if attempt < max_retries:
                 print(f"  Local LLM not reachable, retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+                continue
+            raise
+        except requests.ReadTimeout:
+            if attempt < max_retries:
+                print(f"  Local LLM read timed out after {request_timeout}s, retrying in {retry_delay}s...")
                 time.sleep(retry_delay)
                 continue
             raise
