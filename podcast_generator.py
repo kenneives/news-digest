@@ -173,7 +173,7 @@ Alex: Let's dive right in..."""
 
 {digest_text}
 
-/no_think"""
+"""
 
     # Embed system prompt in user message for better compatibility (some models ignore system role)
     combined_prompt = f"{system_prompt}\n\n---\n\n{user_prompt}"
@@ -185,6 +185,7 @@ Alex: Let's dive right in..."""
         ],
         "stream": False,
         "keep_alive": "5m",
+        "think": False,
         "options": {
             "num_predict": 4096 if not test_mode else 1024,
             "num_ctx": 8192,

@@ -286,14 +286,14 @@ def save_history(history: dict) -> None:
 
 def cleanup_old_history(history: dict, days: int = 7) -> dict:
     """Remove articles older than specified days from history."""
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     cutoff_str = cutoff.isoformat()
 
     history["sent_articles"] = {
         k: v for k, v in history["sent_articles"].items()
         if v.get("sent_at", "") > cutoff_str
     }
-    history["last_cleanup"] = datetime.now().isoformat()
+    history["last_cleanup"] = datetime.now(timezone.utc).isoformat()
     return history
 
 
@@ -320,7 +320,7 @@ def mark_articles_as_sent(articles: list[Article], history: dict) -> dict:
             "title": article.title,
             "link": article.link,
             "source": article.source,
-            "sent_at": datetime.now().isoformat()
+            "sent_at": datetime.now(timezone.utc).isoformat()
         }
     return history
 
@@ -334,15 +334,15 @@ def fetch_rss_feed(name: str, url: str, max_articles: int = 5) -> list[Article]:
     articles = []
     try:
         feed = feedparser.parse(url)
-        cutoff = datetime.now() - timedelta(days=1)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=1)
 
         for entry in feed.entries[:max_articles * 2]:  # Fetch extra to filter
             # Try to parse the published date
             published = None
             if hasattr(entry, 'published_parsed') and entry.published_parsed:
-                published = datetime(*entry.published_parsed[:6])
+                published = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
             elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
-                published = datetime(*entry.updated_parsed[:6])
+                published = datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc)
 
             # Filter to last 24 hours if we have a date
             if published and published < cutoff:
@@ -395,7 +395,7 @@ def fetch_hacker_news_top(max_articles: int = 10) -> list[Article]:
                     link=story.get('url', f"https://news.ycombinator.com/item?id={story_id}"),
                     summary=f"Score: {story.get('score', 0)} | Comments: {story.get('descendants', 0)}",
                     source="Hacker News (Top)",
-                    published=datetime.fromtimestamp(story.get('time', 0)) if story.get('time') else None
+                    published=datetime.fromtimestamp(story.get('time', 0), tz=timezone.utc) if story.get('time') else None
                 ))
     except Exception as e:
         print(f"Error fetching HN API: {e}")
@@ -439,7 +439,7 @@ def cleanup_old_logs(retention_days: int) -> None:
     if not log_file.parent.exists():
         return
 
-    cutoff = datetime.now() - timedelta(days=retention_days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
     base_name = log_file.name
 
     for path in log_file.parent.iterdir():
@@ -451,7 +451,7 @@ def cleanup_old_logs(retention_days: int) -> None:
         if not path.name.startswith(base_name + "."):
             continue
         try:
-            mtime = datetime.fromtimestamp(path.stat().st_mtime)
+            mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
         except OSError:
             continue
         if mtime < cutoff:
