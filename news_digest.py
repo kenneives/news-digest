@@ -282,6 +282,55 @@ def save_history(history: dict) -> None:
             json.dump(history, f, indent=2)
     except IOError as e:
         print(f"Warning: Could not save history file: {e}")
+        return
+
+    # Sync to AgentGraph EC2 so marketing bot can read news signals
+    sync_digest_to_ec2()
+
+
+def sync_digest_to_ec2() -> None:
+    """Copy digest_history.json to AgentGraph EC2 instance.
+
+    Non-blocking, best-effort — if it fails the digest still works.
+    The marketing bot uses this for topical campaign planning.
+    """
+    import subprocess
+
+    ec2_host = os.getenv("AGENTGRAPH_EC2_HOST", "98.94.217.37")
+    ssh_key = os.getenv(
+        "AGENTGRAPH_SSH_KEY",
+        str(Path.home() / ".ssh" / "agentgraph-key.pem"),
+    )
+    remote_path = os.getenv(
+        "AGENTGRAPH_DIGEST_PATH",
+        "/home/ec2-user/agentgraph/digest_history.json",
+    )
+
+    if not Path(ssh_key).exists():
+        print("⏭️ EC2 sync skipped (SSH key not found)")
+        return
+
+    try:
+        result = subprocess.run(
+            [
+                "scp", "-i", ssh_key,
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "ConnectTimeout=10",
+                str(HISTORY_FILE),
+                f"ec2-user@{ec2_host}:{remote_path}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0:
+            print("☁️ Digest history synced to AgentGraph EC2")
+        else:
+            print(f"⚠️ EC2 sync failed: {result.stderr.strip()}")
+    except subprocess.TimeoutExpired:
+        print("⚠️ EC2 sync timed out (30s)")
+    except Exception as e:
+        print(f"⚠️ EC2 sync error: {e}")
 
 
 def cleanup_old_history(history: dict, days: int = 7) -> dict:
