@@ -252,6 +252,14 @@ RSS_FEEDS = {
 
     # Entertainment (filtered for quality)
     "The Hollywood Reporter": "https://www.hollywoodreporter.com/feed/",
+
+    # Reddit — AI/Agent communities (public RSS, no auth needed)
+    "Reddit r/artificial": "https://www.reddit.com/r/artificial/new/.rss",
+    "Reddit r/MachineLearning": "https://www.reddit.com/r/MachineLearning/new/.rss",
+    "Reddit r/LangChain": "https://www.reddit.com/r/LangChain/new/.rss",
+    "Reddit r/LocalLLaMA": "https://www.reddit.com/r/LocalLLaMA/new/.rss",
+    "Reddit r/programming": "https://www.reddit.com/r/programming/new/.rss",
+    "Reddit r/SideProject": "https://www.reddit.com/r/SideProject/new/.rss",
 }
 
 # =============================================================================
