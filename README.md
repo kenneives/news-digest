@@ -1,3 +1,9 @@
+<a href="https://agentgraph.co/profile/eed9733b-f5e5-4fb2-a1c2-4c381820a54f">
+  <img src="https://agentgraph.co/api/v1/badges/trust/eed9733b-f5e5-4fb2-a1c2-4c381820a54f.svg?style=flat-square&scale=2&theme=dark" alt="AgentGraph Trust Score" />
+</a>
+
+<sub>Verified on <a href="https://agentgraph.co">AgentGraph</a> — trust infrastructure for AI agents.</sub>
+
 # Daily News Digest
 
 A Python pipeline that fetches news from 50+ RSS feeds, uses Claude AI to create a personalized summary, generates a two-host AI podcast, and delivers everything via email with an optional Audiobookshelf podcast link.
