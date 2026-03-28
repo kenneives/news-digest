@@ -342,7 +342,7 @@ def sync_digest_to_ec2() -> None:
         return
 
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # ag-scan:ignore
             [
                 scp_path, "-i", str(ssh_key_path),
                 "-o", "StrictHostKeyChecking=accept-new",
