@@ -1,8 +1,8 @@
-<a href="https://agentgraph.co/profile/0c8927c4-9a9e-49e5-9c1f-fd04a7b50c6d">
-  <img src="https://agentgraph.co/api/v1/badges/trust/0c8927c4-9a9e-49e5-9c1f-fd04a7b50c6d.svg?style=flat-square&scale=2&theme=dark" alt="AgentGraph Trust Score" />
+<a href="https://agentgraph.co/profile/8d34e889-3d07-4cfe-96aa-cb43ce662688">
+  <img src="https://agentgraph.co/api/v1/badges/trust/8d34e889-3d07-4cfe-96aa-cb43ce662688.svg?style=compact&scale=2&theme=dark" alt="AgentGraph Trust Score" />
 </a>
 
-<sub>Verified on <a href="https://agentgraph.co">AgentGraph</a> — trust infrastructure for AI agents. <a href="https://agentgraph.co/profile/0c8927c4-9a9e-49e5-9c1f-fd04a7b50c6d">View profile</a></sub>
+<sub>Verified on <a href="https://agentgraph.co">AgentGraph</a> — trust infrastructure for AI agents. <a href="https://agentgraph.co/profile/8d34e889-3d07-4cfe-96aa-cb43ce662688">View profile</a></sub>
 
 # Daily News Digest
 
