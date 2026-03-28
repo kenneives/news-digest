@@ -285,8 +285,14 @@ def load_history() -> dict:
 
 def save_history(history: dict) -> None:
     """Save the history of sent articles."""
+    # Resolve and validate the write target stays within the project directory
+    project_dir = Path(__file__).parent.resolve()
+    target = HISTORY_FILE.resolve()
+    if not str(target).startswith(str(project_dir) + os.sep) and target != project_dir:
+        print(f"Warning: Refusing to write outside project dir: {target}")
+        return
     try:
-        with open(HISTORY_FILE, 'w') as f:
+        with open(target, 'w') as f:
             json.dump(history, f, indent=2)
     except IOError as e:
         print(f"Warning: Could not save history file: {e}")
@@ -302,7 +308,15 @@ def sync_digest_to_ec2() -> None:
     Non-blocking, best-effort — if it fails the digest still works.
     The marketing bot uses this for topical campaign planning.
     """
+    import re
+    import shutil
     import subprocess
+
+    # Resolve scp to a full path — avoid relying on PATH
+    scp_path = shutil.which("scp")
+    if scp_path is None:
+        print("⚠️ EC2 sync skipped (scp not found)")
+        return
 
     ec2_host = os.getenv("AGENTGRAPH_EC2_HOST", "98.94.217.37")
     ssh_key = os.getenv(
@@ -314,15 +328,24 @@ def sync_digest_to_ec2() -> None:
         "/home/ec2-user/agentgraph/digest_history.json",
     )
 
-    if not Path(ssh_key).exists():
+    # Validate env-sourced inputs to prevent argument injection
+    if not re.match(r'^[\w.:/-]+$', ec2_host):
+        print(f"⚠️ EC2 sync skipped (invalid host: {ec2_host})")
+        return
+    if not re.match(r'^[\w./-]+$', remote_path):
+        print(f"⚠️ EC2 sync skipped (invalid remote path: {remote_path})")
+        return
+
+    ssh_key_path = Path(ssh_key).resolve()
+    if not ssh_key_path.exists():
         print("⏭️ EC2 sync skipped (SSH key not found)")
         return
 
     try:
         result = subprocess.run(
             [
-                "scp", "-i", ssh_key,
-                "-o", "StrictHostKeyChecking=no",
+                scp_path, "-i", str(ssh_key_path),
+                "-o", "StrictHostKeyChecking=accept-new",
                 "-o", "ConnectTimeout=10",
                 str(HISTORY_FILE),
                 f"ec2-user@{ec2_host}:{remote_path}",
