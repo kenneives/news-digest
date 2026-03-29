@@ -373,6 +373,14 @@ def cleanup_old_history(history: dict, days: int = 7) -> dict:
         k: v for k, v in history["sent_articles"].items()
         if v.get("sent_at", "") > cutoff_str
     }
+
+    # Also prune stale Reddit thread details
+    thread_details = history.get("reddit_thread_details", {})
+    history["reddit_thread_details"] = {
+        url: detail for url, detail in thread_details.items()
+        if detail.get("fetched_at", "") > cutoff_str
+    }
+
     history["last_cleanup"] = datetime.now(timezone.utc).isoformat()
     return history
 
@@ -504,6 +512,100 @@ def fetch_all_news() -> list[Article]:
     print(f"  Got {len(hn_articles)} articles")
 
     return all_articles
+
+
+def fetch_reddit_thread_details(
+    articles: list[Article],
+    history: dict,
+    max_threads: int = 20,
+) -> dict:
+    """Fetch full thread details for Reddit articles and cache in history.
+
+    The AgentGraph marketing bot needs thread details (selftext, top comments)
+    to generate contextual reply drafts. Since AgentGraph runs on EC2 which
+    Reddit blocks, we fetch details here (Windows server) and pass them via
+    digest_history.json.
+
+    Args:
+        articles: All fetched articles (will filter to Reddit only).
+        history: The digest history dict to update.
+        max_threads: Max number of threads to fetch details for.
+
+    Returns:
+        Updated history dict with reddit_thread_details populated.
+    """
+    reddit_articles = [a for a in articles if "reddit.com" in a.link]
+    if not reddit_articles:
+        return history
+
+    if "reddit_thread_details" not in history:
+        history["reddit_thread_details"] = {}
+
+    existing = history["reddit_thread_details"]
+    to_fetch = [a for a in reddit_articles if a.link not in existing][:max_threads]
+
+    if not to_fetch:
+        print(f"  All {len(reddit_articles)} Reddit threads already cached")
+        return history
+
+    print(f"  Fetching details for {len(to_fetch)} Reddit threads...")
+    fetched = 0
+    for article in to_fetch:
+        url = article.link.rstrip("/")
+        json_url = url + ".json"
+        try:
+            resp = requests.get(
+                json_url,
+                params={"raw_json": 1},
+                headers={"User-Agent": "NewsDigest/1.0 (daily digest bot)"},
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                print(f"    Skip {article.title[:50]}... (HTTP {resp.status_code})")
+                continue
+
+            data = resp.json()
+            if not isinstance(data, list) or len(data) < 1:
+                continue
+
+            post_data = (
+                data[0].get("data", {}).get("children", [{}])[0].get("data", {})
+            )
+
+            top_comments = []
+            if len(data) > 1:
+                for c in data[1].get("data", {}).get("children", [])[:5]:
+                    cd = c.get("data", {})
+                    if cd.get("body"):
+                        top_comments.append({
+                            "author": cd.get("author", "[deleted]"),
+                            "body": cd.get("body", "")[:500],
+                            "score": cd.get("score", 0),
+                        })
+
+            existing[article.link] = {
+                "title": post_data.get("title", article.title),
+                "selftext": post_data.get("selftext", "")[:2000],
+                "author": post_data.get("author", "[deleted]"),
+                "score": post_data.get("score", 0),
+                "num_comments": post_data.get("num_comments", 0),
+                "subreddit": post_data.get("subreddit", ""),
+                "created_utc": post_data.get("created_utc", 0),
+                "url": article.link,
+                "top_comments": top_comments,
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+            }
+            fetched += 1
+        except Exception as e:
+            print(f"    Error fetching {article.title[:50]}...: {e}")
+            continue
+
+        # Brief pause to avoid Reddit rate limiting
+        time.sleep(1)
+
+    print(f"  ✓ Fetched {fetched} thread details ({len(existing)} total cached)")
+    history["reddit_thread_details"] = existing
+    return history
 
 
 # =============================================================================
@@ -1336,6 +1438,10 @@ def main():
         print("📥 Fetching news from sources...")
         articles = fetch_all_news()
         print(f"\n✓ Fetched {len(articles)} total articles")
+
+        # Step 1b: Fetch Reddit thread details for AgentGraph marketing bot
+        print("\n🔗 Fetching Reddit thread details...")
+        history = fetch_reddit_thread_details(articles, history)
 
         # Step 2: Filter out duplicates from previous digests
         print("\n🔍 Filtering duplicates...")
