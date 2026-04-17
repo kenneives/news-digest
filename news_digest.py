@@ -684,7 +684,7 @@ def resolve_model_order(client: anthropic.Anthropic) -> list[str]:
     refresh_days = int(os.getenv("MODEL_REFRESH_DAYS", "7"))
     default_models = {
         "sonnet": "claude-sonnet-4-5",
-        "opus": "claude-opus-4-6",
+        "opus": "claude-opus-4-7",
         "haiku": "claude-haiku-4-5",
     }
 
