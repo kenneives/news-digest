@@ -421,7 +421,21 @@ def fetch_rss_feed(name: str, url: str, max_articles: int = 5) -> list[Article]:
     """Fetch articles from an RSS feed."""
     articles = []
     try:
-        feed = feedparser.parse(url)
+        # Fetch via requests so we control the User-Agent — Reddit (and a few
+        # others) return 403 to feedparser's default UA, and feedparser swallows
+        # that silently as 0 entries.
+        resp = requests.get(
+            url,
+            headers={"User-Agent": "NewsDigest/1.0 (daily digest bot)"},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            print(f"  ⚠️ {name} HTTP {resp.status_code} — skipping")
+            return articles
+        feed = feedparser.parse(resp.content)
+        if feed.bozo and not feed.entries:
+            print(f"  ⚠️ {name} returned no entries (bozo={feed.bozo})")
+            return articles
         cutoff = datetime.now(timezone.utc) - timedelta(days=1)
 
         for entry in feed.entries[:max_articles * 2]:  # Fetch extra to filter
