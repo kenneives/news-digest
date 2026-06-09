@@ -303,6 +303,20 @@ def save_history(history: dict) -> None:
     sync_digest_to_ec2()
 
 
+def _alert_ec2_sync_failure(detail: str) -> None:
+    """Email when the EC2 sync fails — otherwise AgentGraph silently goes stale
+    (it never receives the fresh news/reddit data the reply-guy depends on)."""
+    try:
+        send_error_email(
+            "EC2 sync to AgentGraph failed",
+            f"Syncing digest_history.json to AgentGraph EC2 failed: {detail}. "
+            "AgentGraph won't receive fresh news/reddit data, so the reply-guy "
+            "and topical campaigns will go stale until this is fixed.",
+        )
+    except Exception as e:
+        print(f"⚠️ Could not send EC2-sync alert email: {e}")
+
+
 def sync_digest_to_ec2() -> None:
     """Copy digest_history.json to AgentGraph EC2 instance.
 
@@ -340,6 +354,7 @@ def sync_digest_to_ec2() -> None:
     ssh_key_path = Path(ssh_key).resolve()
     if not ssh_key_path.exists():
         print("⏭️ EC2 sync skipped (SSH key not found)")
+        _alert_ec2_sync_failure(f"SSH key not found at {ssh_key_path}")
         return
 
     try:
@@ -359,10 +374,14 @@ def sync_digest_to_ec2() -> None:
             print("☁️ Digest history synced to AgentGraph EC2")
         else:
             print(f"⚠️ EC2 sync failed: {result.stderr.strip()}")
+            _alert_ec2_sync_failure(
+                result.stderr.strip() or f"scp exited {result.returncode}")
     except subprocess.TimeoutExpired:
         print("⚠️ EC2 sync timed out (30s)")
+        _alert_ec2_sync_failure("scp timed out after 30s")
     except Exception as e:
         print(f"⚠️ EC2 sync error: {e}")
+        _alert_ec2_sync_failure(str(e))
 
 
 def cleanup_old_history(history: dict, days: int = 7) -> dict:
