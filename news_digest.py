@@ -562,62 +562,42 @@ def fetch_reddit_thread_details(
         print(f"  All {len(reddit_articles)} Reddit threads already cached")
         return history
 
-    print(f"  Fetching details for {len(to_fetch)} Reddit threads...")
+    # Reddit blocks the unauthenticated .json endpoint (403 since ~Jun 5 2026),
+    # which silently emptied reddit_thread_details and killed the reply-guy. Build
+    # details from the RSS feed content the digest already fetched (title + post
+    # body + link) instead — no .json, no OAuth. RSS carries no comments; the
+    # AgentGraph reply-guy replies to the post itself when top_comments is empty.
+    print(f"  Building details for {len(to_fetch)} Reddit threads from RSS...")
     fetched = 0
     for article in to_fetch:
-        url = article.link.rstrip("/")
-        json_url = url + ".json"
         try:
-            resp = requests.get(
-                json_url,
-                params={"raw_json": 1},
-                headers={"User-Agent": "NewsDigest/1.0 (daily digest bot)"},
-                timeout=10,
-            )
-            if resp.status_code != 200:
-                print(f"    Skip {article.title[:50]}... (HTTP {resp.status_code})")
-                continue
-
-            data = resp.json()
-            if not isinstance(data, list) or len(data) < 1:
-                continue
-
-            post_data = (
-                data[0].get("data", {}).get("children", [{}])[0].get("data", {})
-            )
-
-            top_comments = []
-            if len(data) > 1:
-                for c in data[1].get("data", {}).get("children", [])[:5]:
-                    cd = c.get("data", {})
-                    if cd.get("body"):
-                        top_comments.append({
-                            "author": cd.get("author", "[deleted]"),
-                            "body": cd.get("body", "")[:500],
-                            "score": cd.get("score", 0),
-                        })
-
+            selftext = BeautifulSoup(
+                article.summary or "", "html.parser",
+            ).get_text(" ", strip=True)
+            # Drop Reddit's RSS boilerplate ("submitted by /u/x [link] [comments]")
+            selftext = re.sub(r"\s*submitted by\s*/u/\S+.*$", "", selftext).strip()
+            m = re.search(r"reddit\.com/r/([^/]+)/", article.link)
+            subreddit = m.group(1) if m else ""
             existing[article.link] = {
-                "title": post_data.get("title", article.title),
-                "selftext": post_data.get("selftext", "")[:2000],
-                "author": post_data.get("author", "[deleted]"),
-                "score": post_data.get("score", 0),
-                "num_comments": post_data.get("num_comments", 0),
-                "subreddit": post_data.get("subreddit", ""),
-                "created_utc": post_data.get("created_utc", 0),
+                "title": article.title,
+                "selftext": selftext[:2000],
+                "author": "",
+                "score": 0,
+                "num_comments": 0,
+                "subreddit": subreddit,
+                "created_utc": (
+                    article.published.timestamp() if article.published else 0
+                ),
                 "url": article.link,
-                "top_comments": top_comments,
+                "top_comments": [],
                 "fetched_at": datetime.now(timezone.utc).isoformat(),
             }
             fetched += 1
         except Exception as e:
-            print(f"    Error fetching {article.title[:50]}...: {e}")
+            print(f"    Error building {article.title[:50]}...: {e}")
             continue
 
-        # Brief pause to avoid Reddit rate limiting
-        time.sleep(1)
-
-    print(f"  ✓ Fetched {fetched} thread details ({len(existing)} total cached)")
+    print(f"  ✓ Built {fetched} Reddit thread details from RSS ({len(existing)} total cached)")
     history["reddit_thread_details"] = existing
     return history
 
