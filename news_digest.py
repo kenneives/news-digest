@@ -551,6 +551,18 @@ def fetch_reddit_thread_details(
     """
     reddit_articles = [a for a in articles if "reddit.com" in a.link]
     if not reddit_articles:
+        # The Reddit RSS feeds returned nothing — with 6 subs this means the
+        # feeds got blocked/broke (don't fail silently like the .json block did).
+        print("  ⚠️ No Reddit articles in any feed — sending alert email")
+        try:
+            send_error_email(
+                "Reddit RSS feeds returned no articles",
+                "The Reddit RSS feeds produced 0 articles this run (normally ~90 "
+                "across the 6 subs). Reddit likely blocked the .rss feeds too — "
+                "the AgentGraph reply-guy will go dry. Check the feeds.",
+            )
+        except Exception as e:
+            print(f"  ⚠️ Could not send Reddit alert email: {e}")
         return history
 
     if "reddit_thread_details" not in history:
@@ -599,6 +611,22 @@ def fetch_reddit_thread_details(
             continue
 
     print(f"  ✓ Built {fetched} Reddit thread details from RSS ({len(existing)} total cached)")
+
+    # Don't fail silently: we had threads to build (to_fetch non-empty) but built
+    # none — that's what happened when Reddit killed the .json endpoint. Alert.
+    if fetched == 0:
+        print("  ⚠️ Built 0 Reddit thread details — sending alert email")
+        try:
+            send_error_email(
+                "Reddit thread building produced 0 results",
+                f"fetch_reddit_thread_details processed {len(to_fetch)} Reddit "
+                "threads from RSS but built 0 of them. The AgentGraph reply-guy "
+                "will go dry until this is fixed — Reddit likely changed access "
+                "again, or the RSS feed/parsing broke. Check the digest output.",
+            )
+        except Exception as e:
+            print(f"  ⚠️ Could not send Reddit alert email: {e}")
+
     history["reddit_thread_details"] = existing
     return history
 
